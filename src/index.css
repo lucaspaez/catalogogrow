@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Utilidad personalizada para ocultar las barras de desplazamiento 
+   manteniendo la funcionalidad de scroll (usada en las categorías)
+*/
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE y Edge */
+  scrollbar-width: none;    /* Firefox */
+}
