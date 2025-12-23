@@ -19,7 +19,7 @@ export const Navbar = ({ onOpenAdmin }) => {
               {settings.storeName.split(' ')[0]} 
               <span className="text-accent ml-1">{settings.storeName.split(' ').slice(1).join(' ')}</span>
             </h1>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Servicio de impresión 3D</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Mejora tus cultivos</span>
           </div>
         </div>
 

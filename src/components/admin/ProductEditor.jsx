@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Save, Plus, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Save, Plus, Trash2, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../lib/firebase';
 import { useStore } from '../../context/StoreContext';
 import { Input, TextArea } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -15,6 +16,7 @@ const timeoutPromise = (ms) => {
 export const ProductEditor = ({ productToEdit, onClose }) => {
   const { settings } = useStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [errors, setErrors] = useState([]);
   
   const [formData, setFormData] = useState(() => {
@@ -43,11 +45,6 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
     const minOrder = Number(formData.minOrder);
     if (isNaN(minOrder) || !Number.isInteger(minOrder) || minOrder < 1) newErrors.push("El pedido mínimo debe ser un entero mayor o igual a 1.");
     
-    const urlPattern = /^(http|https|\/).+/;
-    if (formData.image && !urlPattern.test(formData.image)) {
-       newErrors.push("La URL de la imagen debe comenzar con http, https o /.");
-    }
-
     if (formData.volumeDiscounts) {
         formData.volumeDiscounts.forEach((d, index) => {
             const threshold = Number(d.threshold);
@@ -123,6 +120,29 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
     }));
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      setFormData(prev => ({ ...prev, image: downloadURL }));
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Error al subir la imagen. Intenta nuevamente.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, image: '' }));
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -177,15 +197,57 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
           />
         </div>
         <div className="space-y-2">
-           <label className="text-xs font-bold uppercase text-slate-500">Imagen (URL)</label>
-           <div className="relative">
-             <Input 
-               value={formData.image}
-               onChange={e => setFormData({...formData, image: e.target.value})}
-               placeholder="/products/..."
-               className="pl-9"
-             />
-             <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+           <label className="text-xs font-bold uppercase text-slate-500">Imagen del Producto</label>
+           <div className="space-y-3">
+             {formData.image ? (
+               <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-white/10 group">
+                 <img 
+                   src={formData.image} 
+                   alt="Preview" 
+                   className="w-full h-full object-cover"
+                 />
+                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                   <Button 
+                     type="button" 
+                     variant="danger" 
+                     size="sm"
+                     onClick={removeImage}
+                     className="bg-red-500/80 hover:bg-red-500 text-white"
+                   >
+                     <Trash2 className="w-4 h-4 mr-2" /> Eliminar Imagen
+                   </Button>
+                 </div>
+               </div>
+             ) : (
+               <div className="relative">
+                 <input
+                   type="file"
+                   accept="image/*"
+                   onChange={handleImageUpload}
+                   className="hidden"
+                   id="image-upload"
+                   disabled={isUploading}
+                 />
+                 <label
+                   htmlFor="image-upload"
+                   className={`
+                     flex flex-col items-center justify-center w-full aspect-video rounded-xl 
+                     border-2 border-dashed border-white/10 bg-white/5 
+                     hover:bg-white/10 hover:border-accent/50 transition-all cursor-pointer
+                     ${isUploading ? 'opacity-50 pointer-events-none' : ''}
+                   `}
+                 >
+                   {isUploading ? (
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mb-2"></div>
+                   ) : (
+                     <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                   )}
+                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                     {isUploading ? 'Subiendo...' : 'Subir Imagen'}
+                   </span>
+                 </label>
+               </div>
+             )}
            </div>
         </div>
       </div>
