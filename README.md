@@ -1,16 +1,78 @@
-# React + Vite
+# 3DPrintEstudio - Catálogo Interactivo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Catálogo de productos online con diseño "Glassmorphism" moderno, carrito de compras integrado con WhatsApp y panel de administración completo.
 
-Currently, two official plugins are available:
+## 🚀 Tecnologías
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+*   **Frontend**: React 19 + Vite
+*   **Estilos**: Tailwind CSS v4 (Variables CSS nativas)
+*   **Backend**: Firebase (Auth, Firestore, Storage)
+*   **Iconos**: Lucide React
 
-## React Compiler
+## 🎨 Características
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+*   **Diseño Moderno**: Interfaz oscura con efectos de vidrio esmerilado (Glassmorphism) y acentos neón.
+*   **Gestión de Productos**:
+    *   CRUD completo (Crear, Leer, Editar, Eliminar).
+    *   Activación/Desactivación de productos.
+    *   Soporte para descuentos por volumen (escalas de precios).
+*   **Carrito de Compras**:
+    *   Cálculo automático de precios según cantidad.
+    *   Persistencia local.
+    *   **Pedido por WhatsApp**: Genera un mensaje detallado automáticamente.
+*   **Configuración Dinámica**:
+    *   Cambio de número de teléfono y nombre de tienda desde el panel admin.
 
-## Expanding the ESLint configuration
+## 🛠️ Instalación y Desarrollo
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1.  **Clonar repositorio**:
+    ```bash
+    git clone <repo-url>
+    cd catalogogrow
+    ```
+
+2.  **Instalar dependencias**:
+    ```bash
+    npm install
+    ```
+
+3.  **Configurar Variables de Entorno**:
+    Crea un archivo `.env` en la raíz con tus credenciales de Firebase:
+    ```env
+    VITE_FIREBASE_API_KEY=tus_credenciales
+    VITE_FIREBASE_AUTH_DOMAIN=tus_credenciales
+    VITE_FIREBASE_PROJECT_ID=tus_credenciales
+    VITE_FIREBASE_STORAGE_BUCKET=tus_credenciales
+    VITE_FIREBASE_MESSAGING_SENDER_ID=tus_credenciales
+    VITE_FIREBASE_APP_ID=tus_credenciales
+    ```
+
+4.  **Iniciar Servidor de Desarrollo**:
+    ```bash
+    npm run dev
+    ```
+
+## 📂 Estructura del Proyecto
+
+```text
+src/
+├── components/
+│   ├── admin/       # Panel de control, Login, Editor de Productos
+│   ├── cart/        # Sidebar del carrito
+│   ├── layout/      # Navbar y elementos estructurales
+│   ├── products/    # Grid, Tarjetas y Modales de detalle
+│   └── ui/          # Componentes base (Button, Input, GlassCard)
+├── context/
+│   ├── AuthContext  # Manejo de sesión (Admin vs Visitante)
+│   ├── CartContext  # Lógica del carrito
+│   └── StoreContext # Configuración global (WhatsApp, Nombre)
+└── lib/             # Configuración de Firebase y utilidades
+```
+
+## 🔐 Autenticación Admin
+
+El sistema utiliza Firebase Auth. Para crear el primer administrador, puedes hacerlo desde la consola de Firebase o habilitar temporalmente el registro en el código si es necesario. Por defecto, solo permite Login.
+
+## 📄 Licencia
+
+Propiedad de 3DPrintEstudio.

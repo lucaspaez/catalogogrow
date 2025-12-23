@@ -1,13 +1,44 @@
 @import "tailwindcss";
 
-/* Utilidad personalizada para ocultar las barras de desplazamiento 
-   manteniendo la funcionalidad de scroll (usada en las categorías)
-*/
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
+@theme {
+  /* Paleta de Colores - 3DPrintEstudio */
+  --color-background: #05101a;
+  --color-surface: #0e2a45;
+  --color-primary: #0e67b4;
+  --color-highlight: #4cc9f0;
+  --color-accent: #3a86ff;
+  
+  /* Fuentes */
+  --font-sans: "Inter", system-ui, sans-serif;
 }
 
-.scrollbar-hide {
-  -ms-overflow-style: none; /* IE y Edge */
-  scrollbar-width: none;    /* Firefox */
+/* Utilitarios personalizados */
+@layer utilities {
+  .glass-panel {
+    @apply bg-surface/80 backdrop-blur-xl border border-white/10 shadow-2xl;
+  }
+  
+  .glass-button {
+    @apply bg-primary text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-95;
+  }
+
+  .glass-input {
+    @apply bg-background/50 border border-white/10 text-white placeholder-slate-400 focus:border-highlight/50 focus:outline-none focus:ring-1 focus:ring-highlight/50 transition-all;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+body {
+  background-color: var(--color-background);
+  color: #f8fafc;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
