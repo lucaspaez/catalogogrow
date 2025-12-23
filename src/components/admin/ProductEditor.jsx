@@ -1,24 +1,28 @@
-import React, { useState } from 'react';
-import { Save, Plus, Trash2, Image as ImageIcon, Upload, X } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../lib/firebase';
+import React, { useState, useMemo } from 'react';
+import { Save, Plus, Trash2, Upload, X } from 'lucide-react';
+import { uploadImage } from '../../lib/imageUpload';
+import { productSchema } from '../../lib/validation';
+import { sanitizeText } from '../../lib/sanitize';
 import { useStore } from '../../context/StoreContext';
+import { useError } from '../../context/ErrorContext';
+import { ProductService } from '../../services/firebaseService';
 import { Input, TextArea } from '../ui/Input';
 import { Button } from '../ui/Button';
 
 const CATEGORIES = ["Estructuras", "Cultivo", "Ventilación", "Accesorios"];
 
-const timeoutPromise = (ms) => {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error("Firebase operation timed out")), ms));
-};
-
 export const ProductEditor = ({ productToEdit, onClose }) => {
   const { settings } = useStore();
+  const { showError } = useError();
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [errors, setErrors] = useState([]);
-  
+  const [validationErrors, setValidationErrors] = useState([]);
+
+  const productService = useMemo(
+    () => new ProductService(settings.catalogId),
+    [settings.catalogId]
+  );
+
   const [formData, setFormData] = useState(() => {
     if (productToEdit && Object.keys(productToEdit).length > 0) {
       return productToEdit;
@@ -36,50 +40,38 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
   });
 
   const validate = () => {
-    const newErrors = [];
-    if (!formData.name.trim()) newErrors.push("El nombre es obligatorio.");
-    
-    const price = Number(formData.price);
-    if (isNaN(price) || price < 0) newErrors.push("El precio debe ser un número mayor o igual a 0.");
-    
-    const minOrder = Number(formData.minOrder);
-    if (isNaN(minOrder) || !Number.isInteger(minOrder) || minOrder < 1) newErrors.push("El pedido mínimo debe ser un entero mayor o igual a 1.");
-    
-    if (formData.volumeDiscounts) {
-        formData.volumeDiscounts.forEach((d, index) => {
-            const threshold = Number(d.threshold);
-            const discountPrice = Number(d.price);
-
-            if (isNaN(threshold) || threshold <= minOrder) {
-                newErrors.push(`Descuento #${index + 1}: La cantidad debe ser mayor al pedido mínimo (${minOrder}).`);
-            }
-            if (isNaN(discountPrice) || discountPrice < 0) {
-                newErrors.push(`Descuento #${index + 1}: El precio no puede ser negativo.`);
-            }
-            if (!isNaN(discountPrice) && !isNaN(price) && discountPrice >= price) {
-                newErrors.push(`Descuento #${index + 1}: El precio debe ser menor al precio base.`);
-            }
-        });
+    try {
+      productSchema.parse({
+        ...formData,
+        price: Number(formData.price),
+        minOrder: Number(formData.minOrder),
+        volumeDiscounts: formData.volumeDiscounts.map(d => ({
+          threshold: Number(d.threshold),
+          price: Number(d.price)
+        }))
+      });
+      setValidationErrors([]);
+      return true;
+    } catch (error) {
+      if (error.errors) {
+        setValidationErrors(error.errors.map(e => e.message));
+      }
+      return false;
     }
-    
-    setErrors(newErrors);
-    return newErrors.length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validate()) return;
 
     setIsLoading(true);
 
     try {
-      const id = productToEdit?.id || Date.now().toString();
-      const docRef = doc(db, 'artifacts', settings.catalogId, 'public', 'data', 'products', id);
-      
-      // Ensure number types
       const payload = {
         ...formData,
+        name: sanitizeText(formData.name),
+        description: sanitizeText(formData.description),
         price: Number(formData.price),
         minOrder: Number(formData.minOrder),
         volumeDiscounts: formData.volumeDiscounts.map(d => ({
@@ -88,14 +80,16 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
         }))
       };
 
-      await Promise.race([
-        setDoc(docRef, payload, { merge: true }),
-        timeoutPromise(10000)
-      ]);
+      if (productToEdit?.id) {
+        await productService.updateProduct(productToEdit.id, payload);
+      } else {
+        await productService.createProduct(payload);
+      }
+
       onClose();
     } catch (error) {
-      console.error("Error saving product:", error);
-      alert("Error al guardar. Ver consola.");
+      showError(error);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -126,14 +120,10 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
 
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      
-      setFormData(prev => ({ ...prev, image: downloadURL }));
+      const imageUrl = await uploadImage(file);
+      setFormData(prev => ({ ...prev, image: imageUrl }));
     } catch (error) {
-      console.error("Error uploading image:", error);
-      alert("Error al subir la imagen a Firebase Storage. Asegúrate de haber configurado las reglas de CORS y Storage.");
+      showError(error);
     } finally {
       setIsUploading(false);
     }
@@ -148,19 +138,19 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-slate-500">Nombre</label>
-          <Input 
-            value={formData.name} 
-            onChange={e => setFormData({...formData, name: e.target.value})} 
+          <Input
+            value={formData.name}
+            onChange={e => setFormData({ ...formData, name: e.target.value })}
             required
             placeholder="Ej: Maceta Hidropónica"
           />
         </div>
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-slate-500">Categoría</label>
-          <select 
+          <select
             className="glass-input w-full rounded-xl px-4 py-3 text-sm appearance-none cursor-pointer"
             value={formData.category}
-            onChange={e => setFormData({...formData, category: e.target.value})}
+            onChange={e => setFormData({ ...formData, category: e.target.value })}
           >
             {CATEGORIES.map(cat => <option key={cat} value={cat} className="bg-background">{cat}</option>)}
           </select>
@@ -169,9 +159,9 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
 
       <div className="space-y-2">
         <label className="text-xs font-bold uppercase text-slate-500">Descripción</label>
-        <TextArea 
+        <TextArea
           value={formData.description}
-          onChange={e => setFormData({...formData, description: e.target.value})}
+          onChange={e => setFormData({ ...formData, description: e.target.value })}
           placeholder="Breve descripción del producto..."
         />
       </div>
@@ -179,88 +169,88 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-slate-500">Precio Base</label>
-          <Input 
+          <Input
             type="number"
             value={formData.price}
-            onChange={e => setFormData({...formData, price: e.target.value})}
+            onChange={e => setFormData({ ...formData, price: e.target.value })}
             required
             min="0"
           />
         </div>
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-slate-500">Mínimo</label>
-          <Input 
+          <Input
             type="number"
             value={formData.minOrder}
-            onChange={e => setFormData({...formData, minOrder: e.target.value})}
+            onChange={e => setFormData({ ...formData, minOrder: e.target.value })}
             min="1"
           />
         </div>
         <div className="space-y-2">
-           <label className="text-xs font-bold uppercase text-slate-500">Imagen del Producto</label>
-           <div className="space-y-3">
-             {formData.image ? (
-               <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-white/10 group">
-                 <img 
-                   src={formData.image} 
-                   alt="Preview" 
-                   className="w-full h-full object-cover"
-                 />
-                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                   <Button 
-                     type="button" 
-                     variant="danger" 
-                     size="sm"
-                     onClick={removeImage}
-                     className="bg-red-500/80 hover:bg-red-500 text-white"
-                   >
-                     <Trash2 className="w-4 h-4 mr-2" /> Eliminar Imagen
-                   </Button>
-                 </div>
-               </div>
-             ) : (
-               <div className="relative">
-                 <input
-                   type="file"
-                   accept="image/*"
-                   onChange={handleImageUpload}
-                   className="hidden"
-                   id="image-upload"
-                   disabled={isUploading}
-                 />
-                 <label
-                   htmlFor="image-upload"
-                   className={`
+          <label className="text-xs font-bold uppercase text-slate-500">Imagen del Producto</label>
+          <div className="space-y-3">
+            {formData.image ? (
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-white/10 group">
+                <img
+                  src={formData.image}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Button
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={removeImage}
+                    className="bg-red-500/80 hover:bg-red-500 text-white"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Eliminar Imagen
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  id="image-upload"
+                  disabled={isUploading}
+                />
+                <label
+                  htmlFor="image-upload"
+                  className={`
                      flex flex-col items-center justify-center w-full aspect-video rounded-xl 
                      border-2 border-dashed border-white/10 bg-white/5 
                      hover:bg-white/10 hover:border-accent/50 transition-all cursor-pointer
                      ${isUploading ? 'opacity-50 pointer-events-none' : ''}
                    `}
-                 >
-                   {isUploading ? (
-                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mb-2"></div>
-                   ) : (
-                     <Upload className="w-8 h-8 text-slate-400 mb-2" />
-                   )}
-                   <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                     {isUploading ? 'Subiendo...' : 'Subir Imagen'}
-                   </span>
-                 </label>
-               </div>
-             )}
-           </div>
+                >
+                  {isUploading ? (
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mb-2"></div>
+                  ) : (
+                    <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                  )}
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    {isUploading ? 'Subiendo...' : 'Subir Imagen'}
+                  </span>
+                </label>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Volume Discounts Section */}
       <div className="bg-background/40 p-4 rounded-2xl border border-white/5 space-y-4">
         <div className="flex justify-between items-center">
-           <label className="text-xs font-bold uppercase text-highlight">Descuentos por Volumen</label>
-           <Button type="button" variant="ghost" size="sm" onClick={addDiscount} className="text-xs bg-white/5">
-             <Plus className="w-3 h-3 mr-1" /> Agregar Escala
-           </Button>
+          <label className="text-xs font-bold uppercase text-highlight">Descuentos por Volumen</label>
+          <Button type="button" variant="ghost" size="sm" onClick={addDiscount} className="text-xs bg-white/5">
+            <Plus className="w-3 h-3 mr-1" /> Agregar Escala
+          </Button>
         </div>
-        
+
         {formData.volumeDiscounts?.length === 0 && (
           <p className="text-xs text-slate-600 italic text-center py-2">Sin descuentos configurados</p>
         )}
@@ -269,25 +259,25 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
           {formData.volumeDiscounts?.map((discount, idx) => (
             <div key={idx} className="flex gap-2 items-center animate-in slide-in-from-left-2">
               <div className="relative flex-1">
-                 <span className="absolute left-3 top-2.5 text-[10px] text-slate-500">CANT &ge;</span>
-                 <input 
-                   type="number" 
-                   className="w-full bg-background rounded-lg pl-12 pr-2 py-2 text-sm border border-white/10 focus:border-highlight/50 outline-none"
-                   value={discount.threshold}
-                   onChange={e => updateDiscount(idx, 'threshold', e.target.value)}
-                 />
+                <span className="absolute left-3 top-2.5 text-[10px] text-slate-500">CANT &ge;</span>
+                <input
+                  type="number"
+                  className="w-full bg-background rounded-lg pl-12 pr-2 py-2 text-sm border border-white/10 focus:border-highlight/50 outline-none"
+                  value={discount.threshold}
+                  onChange={e => updateDiscount(idx, 'threshold', e.target.value)}
+                />
               </div>
               <div className="relative flex-1">
-                 <span className="absolute left-3 top-2.5 text-[10px] text-slate-500">$</span>
-                 <input 
-                   type="number"
-                   className="w-full bg-background rounded-lg pl-6 pr-2 py-2 text-sm border border-white/10 focus:border-highlight/50 outline-none"
-                   value={discount.price}
-                   onChange={e => updateDiscount(idx, 'price', e.target.value)}
-                 />
+                <span className="absolute left-3 top-2.5 text-[10px] text-slate-500">$</span>
+                <input
+                  type="number"
+                  className="w-full bg-background rounded-lg pl-6 pr-2 py-2 text-sm border border-white/10 focus:border-highlight/50 outline-none"
+                  value={discount.price}
+                  onChange={e => updateDiscount(idx, 'price', e.target.value)}
+                />
               </div>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => removeDiscount(idx)}
                 className="p-2 hover:bg-red-500/20 text-slate-500 hover:text-red-500 rounded-lg transition-colors"
               >
@@ -298,11 +288,11 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
         </div>
       </div>
 
-      {errors.length > 0 && (
+      {validationErrors.length > 0 && (
         <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-4 space-y-1">
           <p className="text-red-400 font-bold text-sm">Por favor corrige los siguientes errores:</p>
           <ul className="list-disc list-inside text-xs text-red-300">
-            {errors.map((err, i) => (
+            {validationErrors.map((err, i) => (
               <li key={i}>{err}</li>
             ))}
           </ul>
