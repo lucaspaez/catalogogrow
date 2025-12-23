@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Save, Plus, Trash2, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../lib/firebase';
+import { db } from '../../lib/firebase';
 import { useStore } from '../../context/StoreContext';
 import { Input, TextArea } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -126,14 +125,23 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
 
     setIsUploading(true);
     try {
-      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      
-      setFormData(prev => ({ ...prev, image: downloadURL }));
+      const formDataUpload = new FormData();
+      formDataUpload.append('image', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      setFormData(prev => ({ ...prev, image: data.url }));
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Error al subir la imagen. Intenta nuevamente.");
+      alert("Error al subir la imagen localmente. Asegúrate de que el servidor de desarrollo esté corriendo.");
     } finally {
       setIsUploading(false);
     }
