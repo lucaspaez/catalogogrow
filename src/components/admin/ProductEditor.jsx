@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { Save, Plus, Trash2, Upload, X } from 'lucide-react';
 import { uploadImage } from '../../lib/imageUpload';
 import { productSchema } from '../../lib/validation';
-import { sanitizeText } from '../../lib/sanitize';
 import { useStore } from '../../context/StoreContext';
 import { useError } from '../../context/ErrorContext';
 import { ProductService } from '../../services/firebaseService';
@@ -70,8 +69,6 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
     try {
       const payload = {
         ...formData,
-        name: sanitizeText(formData.name),
-        description: sanitizeText(formData.description),
         price: Number(formData.price),
         minOrder: Number(formData.minOrder),
         volumeDiscounts: formData.volumeDiscounts.map(d => ({
