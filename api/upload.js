@@ -1,11 +1,7 @@
 import { put } from '@vercel/blob';
 
-// Esta es una API Route de Vercel (funciona en Vercel Functions)
-// Necesita ser serverless para acceder al token de Vercel Blob
+// Node.js runtime (default) es compatible con @vercel/blob
 
-export const config = {
-    runtime: 'edge',
-};
 
 export default async function handler(request) {
     // Verificar que sea POST
