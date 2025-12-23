@@ -9,7 +9,7 @@ export const useStore = () => useContext(StoreContext);
 
 export const StoreProvider = ({ children }) => {
   const [settings, setSettings] = useState({
-    storeName: '3DPrintEstudio',
+    storeName: 'Santa Montaña',
     whatsappNumber: '5491112345678', // Default backup
     active: true,
     catalogId: 'grow-3d-main' // Constant ID for now

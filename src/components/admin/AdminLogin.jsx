@@ -33,7 +33,7 @@ export const AdminLogin = ({ onClose }) => {
       </div>
       
       <h2 className="text-2xl font-black uppercase tracking-widest mb-2 text-white">Acceso Admin</h2>
-      <p className="text-slate-400 text-sm mb-8 text-center">Panel de Control de 3DPrintEstudio</p>
+      <p className="text-slate-400 text-sm mb-8 text-center">Panel de Control de Santa Montaña</p>
 
       <form onSubmit={handleSubmit} className="w-full space-y-4">
         <div className="space-y-2">

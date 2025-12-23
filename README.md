@@ -1,4 +1,4 @@
-# 3DPrintEstudio - Catálogo Interactivo
+# Santa Montaña - Catálogo Interactivo
 
 Catálogo de productos online con diseño "Glassmorphism" moderno, carrito de compras integrado con WhatsApp y panel de administración completo.
 
@@ -75,4 +75,4 @@ El sistema utiliza Firebase Auth. Para crear el primer administrador, puedes hac
 
 ## 📄 Licencia
 
-Propiedad de 3DPrintEstudio.
+Propiedad de Santa Montaña.
