@@ -28,13 +28,24 @@ export const uploadImage = async (file) => {
         );
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
+        // Convertir archivo a base64 para enviar como JSON
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+
         const response = await fetch('/api/upload', {
             method: 'POST',
-            body: formData,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                file: base64,
+                filename: file.name,
+            }),
         });
 
         if (!response.ok) {

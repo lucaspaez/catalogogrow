@@ -2,64 +2,66 @@ import { put } from '@vercel/blob';
 
 // Node.js runtime (default) es compatible con @vercel/blob
 
-
-export default async function handler(request) {
+export default async function handler(req, res) {
     // Verificar que sea POST
-    if (request.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-            status: 405,
-            headers: { 'Content-Type': 'application/json' },
-        });
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
     try {
-        // Obtener el archivo del FormData
-        const formData = await request.formData();
-        const file = formData.get('file');
+        // En Node.js runtime, el body viene como JSON
+        const { file, filename } = req.body;
 
         if (!file) {
-            return new Response(JSON.stringify({ error: 'No se proporcionó archivo' }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' },
+            return res.status(400).json({ error: 'No se proporcionó archivo' });
+        }
+
+        // El archivo viene como data URL (data:image/jpeg;base64,...)
+        // Extraer el tipo y el base64
+        const matches = file.match(/^data:(.+);base64,(.+)$/);
+        if (!matches) {
+            return res.status(400).json({ error: 'Formato de archivo inválido' });
+        }
+
+        const mimeType = matches[1];
+        const base64Data = matches[2];
+
+        // Validar tipo de archivo
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowedTypes.includes(mimeType)) {
+            return res.status(400).json({
+                error: 'Tipo de archivo no permitido. Usa JPG, PNG, WEBP o GIF.'
             });
         }
 
-        // Validaciones
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-        if (!allowedTypes.includes(file.type)) {
-            return new Response(
-                JSON.stringify({ error: 'Tipo de archivo no permitido. Usa JPG, PNG, WEBP o GIF.' }),
-                { status: 400, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
+        // Convertir base64 a Buffer
+        const buffer = Buffer.from(base64Data, 'base64');
 
-        const maxSize = 5 * 1024 * 1024; // 5MB
-        if (file.size > maxSize) {
-            return new Response(
-                JSON.stringify({ error: 'El archivo es demasiado grande. Máximo 5MB.' }),
-                { status: 400, headers: { 'Content-Type': 'application/json' } }
-            );
+        // Validar tamaño (máximo 5MB)
+        const maxSize = 5 * 1024 * 1024;
+        if (buffer.length > maxSize) {
+            return res.status(400).json({
+                error: 'El archivo es demasiado grande. Máximo 5MB.'
+            });
         }
 
         // Generar nombre único para el archivo
         const timestamp = Date.now();
-        const filename = `products/${timestamp}-${file.name}`;
+        const extension = mimeType.split('/')[1];
+        const finalFilename = `products/${timestamp}-${filename || `image.${extension}`}`;
 
         // Subir a Vercel Blob
-        const blob = await put(filename, file, {
+        const blob = await put(finalFilename, buffer, {
             access: 'public',
-            token: process.env.BLOB_READ_WRITE_TOKEN,
+            contentType: mimeType,
         });
 
-        return new Response(
-            JSON.stringify({ url: blob.url }),
-            { status: 200, headers: { 'Content-Type': 'application/json' } }
-        );
+        return res.status(200).json({ url: blob.url });
     } catch (error) {
         console.error('Upload error:', error);
-        return new Response(
-            JSON.stringify({ error: 'Error al subir imagen' }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
+        return res.status(500).json({
+            error: 'Error al subir imagen',
+            details: error.message
+        });
     }
 }
