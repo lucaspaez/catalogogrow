@@ -11,12 +11,15 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.18",
+    "@vercel/blob": "^2.0.0",
     "clsx": "^2.1.1",
+    "dompurify": "^3.3.1",
     "firebase": "^12.7.0",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
