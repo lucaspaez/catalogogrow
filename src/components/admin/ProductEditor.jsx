@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Save, Plus, Trash2, Image as ImageIcon, Upload, X } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../../lib/firebase';
 import { useStore } from '../../context/StoreContext';
 import { Input, TextArea } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -125,23 +126,14 @@ export const ProductEditor = ({ productToEdit, onClose }) => {
 
     setIsUploading(true);
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append('image', file);
-
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formDataUpload,
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
-      setFormData(prev => ({ ...prev, image: data.url }));
+      const storageRef = ref(storage, `products/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      
+      setFormData(prev => ({ ...prev, image: downloadURL }));
     } catch (error) {
       console.error("Error uploading image:", error);
-      alert("Error al subir la imagen localmente. Asegúrate de que el servidor de desarrollo esté corriendo.");
+      alert("Error al subir la imagen a Firebase Storage. Asegúrate de haber configurado las reglas de CORS y Storage.");
     } finally {
       setIsUploading(false);
     }
