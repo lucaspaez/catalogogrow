@@ -41,7 +41,7 @@ export const AdminLogin = ({ onClose }) => {
           <div className="relative">
             <Input 
               type="email" 
-              placeholder="admin@3dprint.com" 
+              placeholder="admin@santamontaña.com" 
               value={email} 
               onChange={(e) => setEmail(e.target.value)} 
               required 

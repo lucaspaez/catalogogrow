@@ -24,7 +24,12 @@ export const StoreProvider = ({ children }) => {
     
     const unsubscribe = onSnapshot(settingsRef, (docSnap) => {
       if (docSnap.exists()) {
-        setSettings(prev => ({ ...prev, ...docSnap.data() }));
+        const data = docSnap.data();
+        // Migración: Si en la DB todavía dice el nombre viejo, lo ignoramos o usamos el nuevo
+        if (data.storeName === '3DPrintEstudio') {
+          data.storeName = 'Santa Montaña';
+        }
+        setSettings(prev => ({ ...prev, ...data }));
       }
       setLoading(false);
     }, (error) => {
