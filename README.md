@@ -229,13 +229,39 @@ service cloud.firestore {
 
 ## 🧪 Testing
 
-**Estado actual**: 0% cobertura (pendiente)
+**Framework**: Vitest + React Testing Library
 
-**Próximos pasos**:
-- Configurar Vitest
-- Tests para validation schemas
-- Tests para servicios
-- Tests de componentes críticos
+### Ejecutar Tests
+
+```bash
+# Ejecutar tests en modo watch
+npm test
+
+# Ejecutar tests una vez
+npm test -- --run
+
+# Ejecutar con UI
+npm run test:ui
+
+# Generar coverage report
+npm run test:coverage
+```
+
+### Cobertura Actual
+
+| Archivo | Statements | Branches | Functions | Lines |
+|---------|-----------|----------|-----------|-------|
+| **errors.js** | 100% | 100% | 100% | 100% |
+| **sanitize.js** | 100% | 100% | 100% | 100% |
+| **validation.js** | 100% | 100% | 100% | 100% |
+
+**Total**: 42 tests pasando ✅
+
+### Objetivos de Cobertura
+
+- ✅ **Core functions**: 100% (logrado)
+- 🎯 **Business logic**: 80% (en progreso)
+- 📝 **Components**: Pendiente
 
 ---
 
