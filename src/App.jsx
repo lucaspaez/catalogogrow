@@ -8,6 +8,7 @@ import { CartSidebar } from './components/cart/CartSidebar';
 import { ProductGrid } from './components/products/ProductGrid';
 import { Modal } from './components/ui/Modal';
 import { Button } from './components/ui/Button';
+import { WhatsAppButton } from './components/ui/WhatsAppButton';
 import { AdminLogin } from './components/admin/AdminLogin';
 import { ProductEditor } from './components/admin/ProductEditor';
 import { SettingsEditor } from './components/admin/SettingsEditor';
@@ -103,6 +104,9 @@ function AppContent() {
       <Modal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} title="Configuración de Tienda">
         <SettingsEditor onClose={() => setIsSettingsOpen(false)} />
       </Modal>
+
+      {/* Botón flotante de WhatsApp */}
+      <WhatsAppButton />
     </div>
   );
 }
